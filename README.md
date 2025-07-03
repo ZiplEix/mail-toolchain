@@ -12,21 +12,21 @@ It includes:
 
 All components are built from scratch using the standard Go libraries, without relying on third-party full mail servers.
 
-### Structure
+## Structure
 
 - `smtp-server/` → Custom SMTP server
+- `smtp-client/` → Go SMTP client
 - `imap-server/` → (Planned) IMAP server
-- `smtp-client/` → (Planned) Go SMTP client
 - `webmail/` → (Planned) SvelteKit frontend
 - `plan.md` → Detailed roadmap
 
-### Requirements
+## Requirements
 
 - Go ≥ 1.20
 - Docker (for PostgreSQL)
 - Thunderbird / Outlook (for testing)
 - OpenSSL (for TLS testing)
 
-### Project Plan
+## Project Plan
 
 The full project roadmap is available in [./plan.md](./plan.md)
