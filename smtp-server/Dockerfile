@@ -2,16 +2,15 @@ FROM golang:1.23
 
 WORKDIR /app
 
-RUN go install github.com/swaggo/swag/cmd/swag@latest
+COPY ./shared ./shared
 
-COPY go.mod go.sum ./
+WORKDIR /app/smtp-server
 
-RUN --mount=type=cache,target=/go/pkg/mod/ \
---mount=type=bind,source=go.sum,target=go.sum \
---mount=type=bind,source=go.mod,target=go.mod \
-go mod download -x
+COPY smtp-server/go.mod smtp-server/go.sum ./
+# RUN go mod edit -replace github.com/ZiplEix/mail-toolchain/shared=./shared
+RUN go mod download -x
 
-COPY . .
+COPY ./smtp-server .
 
 RUN go build -o main .
 

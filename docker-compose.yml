@@ -9,7 +9,9 @@ services:
       - postgres-db:/var/lib/postgresql/data
 
   smtp-server:
-    build: smtp-server/
+    build:
+      context: .
+      dockerfile: smtp-server/Dockerfile
     env_file:
       - .env.docker
     ports:
