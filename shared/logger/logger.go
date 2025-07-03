@@ -6,16 +6,18 @@ import (
 	"time"
 )
 
-func Event(conn net.Conn, message string) {
-	ts := time.Now().Format("2006-01-02 15:04:05")
-	addr := conn.RemoteAddr().String()
-	fmt.Printf("[%s] [%s] %s\n", ts, addr, message)
+func Event(conn net.Conn, event string) {
+	remote := conn.RemoteAddr().String()
+	t := time.Now().Format("2006-01-02 15:04:05")
+	fmt.Printf("[%s] [%s] %s\n", t, remote, event)
 }
 
 func Info(msg string) {
-	fmt.Printf("[INFO] %s\n", msg)
+	t := time.Now().Format("2006-01-02 15:04:05")
+	fmt.Printf("[%s] [INFO] %s\n", t, msg)
 }
 
 func Error(msg string) {
-	fmt.Printf("[ERROR] %s\n", msg)
+	t := time.Now().Format("2006-01-02 15:04:05")
+	fmt.Printf("[%s] [ERROR] %s\n", t, msg)
 }

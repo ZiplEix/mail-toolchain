@@ -2,27 +2,50 @@ package database
 
 import (
 	"context"
-	"sync"
+	"fmt"
+	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var (
-	pool *pgxpool.Pool
-	once sync.Once
-)
+var Pool *pgxpool.Pool
 
-func Init(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
+func Init(dsn string) error {
 	var err error
-	once.Do(func() {
-		if pool, err = pgxpool.New(ctx, dsn); err != nil {
-			return
-		}
-		err = pool.Ping(ctx)
-	})
-	return pool, err
+	Pool, err = pgxpool.New(context.Background(), dsn)
+	if err != nil {
+		return fmt.Errorf("unable to connect to database: %v", err)
+	}
+	if err := Pool.Ping(context.Background()); err != nil {
+		return fmt.Errorf("unable to ping database: %v", err)
+	}
+	fmt.Println("✅ Connected to PostgreSQL")
+	return nil
 }
 
-func Pool() *pgxpool.Pool {
-	return pool
+func MigrateMailsTable() error {
+	sql := `
+	CREATE TABLE IF NOT EXISTS mails (
+		id SERIAL PRIMARY KEY,
+		sender VARCHAR(255) NOT NULL,
+		recipients TEXT[] NOT NULL,
+		raw_data TEXT NOT NULL,
+		received_at TIMESTAMP NOT NULL DEFAULT NOW()
+	);`
+	_, err := Pool.Exec(context.Background(), sql)
+	return err
+}
+
+func SaveMail(sender string, recipients []string, rawData []string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	raw := strings.Join(rawData, "\r\n")
+
+	_, err := Pool.Exec(ctx,
+		"INSERT INTO mails(sender, recipients, raw_data, received_at) VALUES($1, $2, $3, NOW())",
+		sender, recipients, raw)
+
+	return err
 }
