@@ -19,6 +19,7 @@ services:
     volumes:
       - ./cert.pem:/cert.pem
       - ./key.pem:/key.pem
+      - ./cert:/cert
 
 volumes:
   postgres-db:

@@ -23,7 +23,6 @@ Now, the sending side.
  - Create an SMTP client in Go (net/smtp) to:
  - Connect to a remote server (Gmail, Outlook, etc.)
  - Send an email with Subject, Body, To, From fields
- - Or expose a REST API /sendMail that uses your Go SMTP client
 
 📦 Goal: Be able to send an email using your own toolchain.
 
