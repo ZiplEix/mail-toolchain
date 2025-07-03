@@ -1,5 +1,7 @@
 package main
 
+// TO LUNCH FROM THIS DIRECTORY
+
 import (
 	"os"
 
@@ -10,12 +12,6 @@ import (
 func main() {
 	_ = godotenv.Load("../.env")
 
-	mailclient.Setup(mailclient.SMTPConfig{
-		Host:     "smtp.gmail.com",
-		Port:     587,
-		Username: os.Getenv("USERNAME"),
-		Password: os.Getenv("PASSWORD"),
-	})
 	// mailclient.Setup(mailclient.SMTPConfig{
 	// 	Host: "localhost",
 	// 	Port: 2525,

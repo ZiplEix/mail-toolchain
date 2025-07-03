@@ -30,7 +30,7 @@ func LunchSMTPServer() {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to start SMTP server: %v", err))
 	}
-	fmt.Println("SMTP server listening on port 2525")
+	logger.Info("SMTP server listening on port 2525")
 
 	for {
 		conn, err := listener.Accept()
