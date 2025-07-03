@@ -1,4 +1,4 @@
-package mailclient
+package smtpclient
 
 type SMTPConfig struct {
 	Host     string

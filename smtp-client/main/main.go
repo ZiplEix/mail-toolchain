@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	mailclient "github.com/ZiplEix/mail-toolchain/mail-client"
+	mailclient "github.com/ZiplEix/mail-toolchain/smtp-client"
 	"github.com/joho/godotenv"
 )
 

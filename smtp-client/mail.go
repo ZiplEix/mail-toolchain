@@ -1,4 +1,4 @@
-package mailclient
+package smtpclient
 
 import (
 	"fmt"
