@@ -4,28 +4,24 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ZiplEix/mail-toolchain/smtp-server/db"
+	"github.com/ZiplEix/mail-toolchain/shared/config"
+	"github.com/ZiplEix/mail-toolchain/shared/database"
 	"github.com/ZiplEix/mail-toolchain/smtp-server/server"
-	"github.com/joho/godotenv"
 )
 
 func init() {
-	godotenv.Load("../.env")
+	if err := config.LoadEnv("../.env"); err != nil {
+		panic(fmt.Sprintf("Failed to load environment variables: %v", err))
+	}
 
-	err := db.InitDB()
-	if err != nil {
-		panic(fmt.Sprintf("Failed to initialize database: %v", err))
+	if err := database.Init(os.Getenv("POSTGRES_URL")); err != nil {
+		panic(fmt.Sprintf("Failed to initialize database connection: %v", err))
 	}
 
 	certPath := os.Getenv("CERT_PATH")
 	keyPath := os.Getenv("KEY_PATH")
 
-	if certPath == "" || keyPath == "" {
-		panic("CERT_PATH or KEY_PATH environment variable is not set")
-	}
-
-	err = server.LoadTLSConfig(certPath, keyPath)
-	if err != nil {
+	if err := server.LoadTLSConfig(certPath, keyPath); err != nil {
 		panic(fmt.Sprintf("Failed to load TLS configuration: %v", err))
 	}
 }

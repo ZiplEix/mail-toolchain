@@ -7,7 +7,8 @@ import (
 	"net"
 	"strings"
 
-	"github.com/ZiplEix/mail-toolchain/smtp-server/db"
+	"github.com/ZiplEix/mail-toolchain/shared/database"
+	"github.com/ZiplEix/mail-toolchain/shared/logger"
 	"github.com/ZiplEix/mail-toolchain/smtp-server/server/internal"
 )
 
@@ -44,7 +45,7 @@ func LunchSMTPServer() {
 func HandleConnection(conn net.Conn) {
 	defer func() {
 		if r := recover(); r != nil {
-			internal.LogEvent(conn, fmt.Sprintf("Recovered from panic: %v", r))
+			logger.Event(conn, fmt.Sprintf("Recovered from panic: %v", r))
 			conn.Close()
 		}
 	}()
@@ -61,11 +62,11 @@ func HandleConnection(conn net.Conn) {
 	sendError := func(code int, msg string) {
 		resp := fmt.Sprintf("%d %s", code, msg)
 		sendLine(resp)
-		internal.LogEvent(conn, "S: "+resp)
+		logger.Event(conn, "S: "+resp)
 	}
 
 	sendLine("220 localhost SMTP ready")
-	internal.LogEvent(conn, "Connection opened")
+	logger.Event(conn, "Connection opened")
 
 	var from string
 	var toList []string
@@ -75,11 +76,11 @@ func HandleConnection(conn net.Conn) {
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil {
-			internal.LogEvent(conn, "Connection closed")
+			logger.Event(conn, "Connection closed")
 			break
 		}
 		line = strings.TrimRight(line, "\r\n")
-		internal.LogEvent(conn, fmt.Sprintf("C: %s", line))
+		logger.Event(conn, fmt.Sprintf("C: %s", line))
 
 		switch mode {
 		case "command":
@@ -139,7 +140,7 @@ func HandleConnection(conn net.Conn) {
 
 			case line == "QUIT":
 				sendLine("221 Bye")
-				internal.LogEvent(conn, "Connection closed via QUIT")
+				logger.Event(conn, "Connection closed via QUIT")
 				return
 
 			case strings.HasPrefix(line, "STARTTLS"):
@@ -151,13 +152,13 @@ func HandleConnection(conn net.Conn) {
 				tlsConn := tls.Server(conn, tlsConfig)
 				err := tlsConn.Handshake()
 				if err != nil {
-					internal.LogEvent(conn, fmt.Sprintf("TLS handshake failed: %v", err))
+					logger.Event(conn, fmt.Sprintf("TLS handshake failed: %v", err))
 					return
 				}
 				conn = tlsConn
 				reader = bufio.NewReader(conn)
 				writer = bufio.NewWriter(conn)
-				internal.LogEvent(conn, "TLS connection established")
+				logger.Event(conn, "TLS connection established")
 
 			default:
 				sendError(500, "Unrecognized command")
@@ -165,13 +166,13 @@ func HandleConnection(conn net.Conn) {
 
 		case "data":
 			if line == "." {
-				err := db.SaveMailToDB(from, toList, dataLines)
+				err := database.SaveMail(from, toList, dataLines)
 				if err != nil {
 					sendError(550, "Error saving message to database")
-					internal.LogEvent(conn, fmt.Sprintf("Error saving mail from %s to %v: %v", from, toList, err))
+					logger.Event(conn, fmt.Sprintf("Error saving mail from %s to %v: %v", from, toList, err))
 				} else {
 					sendLine("250 OK: message accepted")
-					internal.LogEvent(conn, fmt.Sprintf("Mail saved from %s to %v", from, toList))
+					logger.Event(conn, fmt.Sprintf("Mail saved from %s to %v", from, toList))
 				}
 				mode = "command"
 				from = ""
