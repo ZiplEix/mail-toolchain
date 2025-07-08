@@ -3,6 +3,7 @@ package server
 import (
 	"bufio"
 	"net"
+	"strings"
 )
 
 type IMAPState int
@@ -15,6 +16,7 @@ const (
 
 type Session struct {
 	Conn       net.Conn
+	Reader     *bufio.Reader
 	Writer     *bufio.Writer
 	State      IMAPState
 	SelectedMB string
@@ -25,6 +27,7 @@ type Session struct {
 func NewSession(conn net.Conn) *Session {
 	return &Session{
 		Conn:   conn,
+		Reader: bufio.NewReader(conn),
 		Writer: bufio.NewWriter(conn),
 		State:  StateNotAuthenticated,
 	}
@@ -35,4 +38,13 @@ func (s *Session) Send(msg string) {
 	s.Writer.Flush()
 
 	// fmt.Println("Sent:", msg)
+}
+
+func (s *Session) ReadLine() (string, error) {
+	line, err := s.Reader.ReadString('\n')
+	if err != nil {
+		return "", err
+	}
+	line = strings.TrimRight(line, "\r\n")
+	return line, nil
 }
