@@ -18,6 +18,10 @@ func init() {
 		panic(fmt.Sprintf("Failed to initialize database connection: %v", err))
 	}
 
+	if err := database.MigrateMailsTable(); err != nil {
+		panic(fmt.Sprintf("Failed to migrate mails table: %v", err))
+	}
+
 	certPath := os.Getenv("CERT_PATH")
 	keyPath := os.Getenv("KEY_PATH")
 
