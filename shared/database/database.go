@@ -6,42 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ZiplEix/mail-toolchain/shared/logger"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var Pool *pgxpool.Pool
-
-func Init(dsn string) error {
-	var err error
-	Pool, err = pgxpool.New(context.Background(), dsn)
-	if err != nil {
-		return fmt.Errorf("unable to connect to database: %v", err)
-	}
-	if err := Pool.Ping(context.Background()); err != nil {
-		return fmt.Errorf("unable to ping database: %v", err)
-	}
-	logger.Info("Connected to PostgreSQL")
-	return nil
-}
-
-func MigrateMailsTable() error {
-	sql := `
-	CREATE TABLE IF NOT EXISTS mails (
-		id SERIAL PRIMARY KEY,
-		sender VARCHAR(255) NOT NULL,
-		recipients TEXT[] NOT NULL,
-		raw_data TEXT NOT NULL,
-		received_at TIMESTAMP NOT NULL DEFAULT NOW()
-	);`
-	_, err := Pool.Exec(context.Background(), sql)
-	if err != nil {
-		return fmt.Errorf("failed to create mails table: %v", err)
-	}
-	logger.Info("Mails table migrated successfully")
-	return nil
-}
 
 func SaveMail(sender string, recipients []string, rawData []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
