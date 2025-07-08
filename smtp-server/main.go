@@ -22,6 +22,10 @@ func init() {
 		panic(fmt.Sprintf("Failed to migrate mails table: %v", err))
 	}
 
+	if err := database.MigrateUsersTable(); err != nil {
+		panic(fmt.Sprintf("Failed to migrate users table: %v", err))
+	}
+
 	certPath := os.Getenv("CERT_PATH")
 	keyPath := os.Getenv("KEY_PATH")
 

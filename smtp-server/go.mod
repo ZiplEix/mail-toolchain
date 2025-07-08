@@ -4,7 +4,7 @@ go 1.23.1
 
 require (
 	github.com/ZiplEix/mail-toolchain/shared v0.0.0-20250703161514-8d3b3016f32e
-	github.com/jackc/pgx/v5 v5.7.5
+	github.com/jackc/pgx/v5 v5.7.5 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 )
 
