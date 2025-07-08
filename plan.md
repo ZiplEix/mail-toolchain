@@ -17,22 +17,22 @@ credible SMTP server:
 
 goal: functional and robust SMTP receptor server usable by a true client (Thunderbird, Outlook, etc.).
 
-# 🔁 Step 3 — Sending Emails (SMTP Client)
+# 🔁 Step 3 — Sending Emails (SMTP Client) ✅
 
 Now, the sending side.
  - Create an SMTP client in Go (net/smtp) to:
  - Connect to a remote server (Gmail, Outlook, etc.)
  - Send an email with Subject, Body, To, From fields
 
-📦 Goal: Be able to send an email using your own toolchain.
+📦 Goal: Be able to send an email using my own toolchain.
 
-# 📬 Step 4 — Minimal IMAP Server
+# 📬 Step 4 — Minimal IMAP Server ✅
 
 Future mail client to be able to read incoming messages.
  - TCP server on port 143 (or a custom one)
  - Basic authentication (user/pass or none at first)
  - Core commands: LOGIN, LIST, SELECT, FETCH, LOGOUT
- - Read maisl from db
+ - Read mails from db
 
 📂 Goal: Create my own webmail or use an IMAP client to read your emails.
 
