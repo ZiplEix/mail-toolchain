@@ -26,7 +26,7 @@ func MigrateMailsTable() error {
 
 func MigrateUsersTable() error {
 	sql := `
-	CREATE TABLE users (
+	CREATE TABLE IF NOT EXISTS users (
 		id SERIAL PRIMARY KEY,
 		email TEXT UNIQUE NOT NULL,
 		password_hash TEXT NOT NULL,
