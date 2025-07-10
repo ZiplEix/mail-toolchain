@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bufio"
 	"crypto/tls"
 	"fmt"
 	"net"
@@ -9,10 +8,11 @@ import (
 
 	"github.com/ZiplEix/mail-toolchain/shared/database"
 	"github.com/ZiplEix/mail-toolchain/shared/logger"
-	"github.com/ZiplEix/mail-toolchain/smtp-server/server/internal"
 )
 
 var tlsConfig *tls.Config
+
+var errSessionQuit = fmt.Errorf("session quit requested")
 
 func LoadTLSConfig(certPath, keyPath string) error {
 	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
@@ -38,145 +38,83 @@ func LunchSMTPServer() {
 			fmt.Println("Error accepting connection:", err)
 			continue
 		}
-		go HandleConnection(conn)
+		session := NewSession(conn)
+		go HandleConnection(session)
 	}
 }
 
-func HandleConnection(conn net.Conn) {
+type smtpHandler func(*Session, string) error
+
+var commandHandlers = map[string]smtpHandler{
+	"EHLO":       ehlo,
+	"HELO":       helo,
+	"NOOP":       noop,
+	"MAIL FROM:": mailFrom,
+	"RCPT TO:":   rcptTo,
+	"DATA":       data,
+	"RSET":       rset,
+	"VRFY":       vrfy,
+	"STARTTLS":   startTLS,
+	"QUIT":       quit,
+}
+
+func HandleConnection(session *Session) {
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Event(conn, fmt.Sprintf("Recovered from panic: %v", r))
-			conn.Close()
+			logger.Event(session.Conn, fmt.Sprintf("Recovered from panic: %v", r))
+			session.Close()
 		}
 	}()
 
-	defer conn.Close()
-	reader := bufio.NewReader(conn)
-	writer := bufio.NewWriter(conn)
+	defer session.Close()
 
-	sendLine := func(s string) {
-		_, _ = writer.WriteString(s + "\r\n")
-		writer.Flush()
-	}
+	session.SendLine("220 localhost SMTP ready")
+	logger.Event(session.Conn, "Connection opened")
 
-	sendError := func(code int, msg string) {
-		resp := fmt.Sprintf("%d %s", code, msg)
-		sendLine(resp)
-		logger.Event(conn, "S: "+resp)
-	}
-
-	sendLine("220 localhost SMTP ready")
-	logger.Event(conn, "Connection opened")
-
-	var from string
-	var toList []string
 	var dataLines []string
-	mode := "command"
 
 	for {
-		line, err := reader.ReadString('\n')
+		line, err := session.Reader.ReadString('\n')
 		if err != nil {
-			logger.Event(conn, "Connection closed")
+			logger.Event(session.Conn, "Connection closed")
 			break
 		}
 		line = strings.TrimRight(line, "\r\n")
-		logger.Event(conn, fmt.Sprintf("C: %s", line))
+		logger.Event(session.Conn, fmt.Sprintf("C: %s", line))
 
-		switch mode {
+		switch session.Mode {
 		case "command":
-			switch {
-			case strings.HasPrefix(line, "NOOP"):
-				sendLine("250 OK")
+			lineUpper := strings.ToUpper(line)
 
-			case strings.HasPrefix(line, "EHLO"):
-				sendLine("250-localhost Hello")
-				sendLine("250-PIPELINING")
-				sendLine("250-SIZE 35882577")
-				sendLine("250-STARTTLS")
-				sendLine("250 HELP")
-
-			case strings.HasPrefix(line, "HELO"):
-				sendLine("250 localhost Hello")
-
-			case strings.HasPrefix(line, "MAIL FROM:"):
-				addr := extractEmailAddress(line, "MAIL FROM:")
-				if !internal.IsValidEmail(addr) {
-					sendError(550, "Invalid sender address")
-					continue
+			handled := false
+			for prefix, handler := range commandHandlers {
+				if strings.HasPrefix(lineUpper, prefix) {
+					err := handler(session, line)
+					if err == errSessionQuit {
+						return
+					}
+					handled = true
+					break
 				}
-				from = addr
-				sendLine("250 OK")
+			}
 
-			case strings.HasPrefix(line, "RCPT TO:"):
-				addr := extractEmailAddress(line, "RCPT TO:")
-				if !internal.IsValidEmail(addr) {
-					sendError(550, "Invalid recipient address")
-					continue
-				}
-				toList = append(toList, addr)
-				sendLine("250 OK")
-
-			case strings.HasPrefix(line, "DATA"):
-				if from == "" || len(toList) == 0 {
-					sendError(503, "Bad sequence: MAIL FROM and RCPT TO required before DATA")
-					continue
-				}
-				sendLine("354 End data with <CR><LF>.<CR><LF>")
-				mode = "data"
-
-			case strings.HasPrefix(line, "RSET"):
-				from = ""
-				toList = nil
-				dataLines = nil
-				sendLine("250 OK: Reset state")
-
-			case strings.HasPrefix(line, "VRFY"):
-				arg := strings.TrimSpace(strings.TrimPrefix(line, "VRFY"))
-				if internal.IsValidEmail(arg) {
-					sendLine("250 User exists")
-				} else {
-					sendError(550, "No such user")
-				}
-
-			case line == "QUIT":
-				sendLine("221 Bye")
-				logger.Event(conn, "Connection closed via QUIT")
-				return
-
-			case strings.HasPrefix(line, "STARTTLS"):
-				if tlsConfig == nil {
-					sendError(454, "TLS not available")
-					continue
-				}
-				sendLine("220 Ready to start TLS")
-				tlsConn := tls.Server(conn, tlsConfig)
-				err := tlsConn.Handshake()
-				if err != nil {
-					logger.Event(conn, fmt.Sprintf("TLS handshake failed: %v", err))
-					return
-				}
-				conn = tlsConn
-				reader = bufio.NewReader(conn)
-				writer = bufio.NewWriter(conn)
-				logger.Event(conn, "TLS connection established")
-
-			default:
-				sendError(500, "Unrecognized command")
+			if !handled {
+				session.SendError(500, "Unrecognized command")
 			}
 
 		case "data":
 			if line == "." {
-				err := database.SaveMail(from, toList, dataLines)
+				err := database.SaveMail(session.From, session.ToList, dataLines)
 				if err != nil {
-					sendError(550, "Error saving message to database")
-					logger.Event(conn, fmt.Sprintf("Error saving mail from %s to %v: %v", from, toList, err))
+					session.SendError(550, "Error saving message to database")
+					logger.Event(session.Conn, fmt.Sprintf("Error saving mail from %s to %v: %v", session.From, session.ToList, err))
 				} else {
-					sendLine("250 OK: message accepted")
-					logger.Event(conn, fmt.Sprintf("Mail saved from %s to %v", from, toList))
+					session.SendLine("250 OK: message accepted")
+					logger.Event(session.Conn, fmt.Sprintf("Mail saved from %s to %v", session.From, session.ToList))
 				}
-				mode = "command"
-				from = ""
-				toList = nil
+				session.Mode = "command"
+				session.From = ""
+				session.ToList = nil
 				dataLines = nil
 			} else {
 				dataLines = append(dataLines, line)
