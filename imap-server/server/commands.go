@@ -158,7 +158,8 @@ func fetch(session *Session, tag string, parts []string) error {
 
 func uid(session *Session, tag string, parts []string) error {
 	if len(parts) >= 4 && strings.ToUpper(parts[2]) == "FETCH" {
-		return handleUIDFetch(session, tag, parts[3], parts[4:])
+		fieldsRaw := strings.Join(parts[4:], " ")
+		return handleUIDFetch(session, tag, parts[3], fieldsRaw)
 	}
 	session.Send(tag + " BAD Unsuported UID subcommand")
 	logger.Info(fmt.Sprintf("Unsuported command: %s %v", tag, parts))
@@ -180,8 +181,8 @@ type UIDFetchRequest struct {
 	Fields     []string
 }
 
-func handleUIDFetch(session *Session, tag string, rangeStr string, fields []string) error {
-	req, err := parseUIDFetch(rangeStr, fields)
+func handleUIDFetch(session *Session, tag string, rangeStr string, fieldsRaw string) error {
+	req, err := parseUIDFetch(rangeStr, fieldsRaw)
 	if err != nil {
 		session.Send(tag + " BAD Invalid UID FETCH syntax: " + err.Error())
 		return err
@@ -190,7 +191,7 @@ func handleUIDFetch(session *Session, tag string, rangeStr string, fields []stri
 	mails, err := database.GetMailsInUIDRange(req.RangeStart, req.RangeEnd)
 	if err != nil {
 		session.Send(tag + " NO Could not retrieve messages in UID range")
-		return fmt.Errorf("db ftech failed: %w", err)
+		return fmt.Errorf("db fetch failed: %w", err)
 	}
 
 	for i, mail := range mails {
@@ -220,8 +221,8 @@ func handleUIDFetch(session *Session, tag string, rangeStr string, fields []stri
 					return nil
 				}
 
-				fieldsRaw := field[start+1 : end]
-				fieldList := strings.Fields(fieldsRaw)
+				headerFields := field[start+1 : end]
+				fieldList := strings.Fields(headerFields)
 				headerData := extractHeaders(mail.RawData, fieldList)
 
 				bodyLiteral = headerData
@@ -247,17 +248,15 @@ func handleUIDFetch(session *Session, tag string, rangeStr string, fields []stri
 	}
 
 	session.Send(tag + " OK UID FETCH completed")
-
 	return nil
 }
 
-func parseUIDFetch(rangeStr string, fields []string) (*UIDFetchRequest, error) {
+func parseUIDFetch(rangeStr string, fieldsRaw string) (*UIDFetchRequest, error) {
 	var start, end int
 	var err error
 
 	if rangeStr == "*" {
-		start = -1
-		end = -1
+		start, end = -1, -1
 	} else if strings.Contains(rangeStr, ":") {
 		parts := strings.Split(rangeStr, ":")
 		start, err = strconv.Atoi(parts[0])
@@ -280,16 +279,47 @@ func parseUIDFetch(rangeStr string, fields []string) (*UIDFetchRequest, error) {
 		end = start
 	}
 
-	joined := strings.Join(fields, " ")
-	joined = strings.TrimPrefix(joined, "(")
-	joined = strings.TrimSuffix(joined, ")")
+	fieldsRaw = strings.TrimPrefix(fieldsRaw, "(")
+	fieldsRaw = strings.TrimSuffix(fieldsRaw, ")")
 
-	fieldList := strings.Fields(joined)
+	var fields []string
+	var current strings.Builder
+	bracketDepth := 0
+
+	for i := 0; i < len(fieldsRaw); i++ {
+		ch := fieldsRaw[i]
+
+		if ch == '(' || ch == '[' {
+			bracketDepth++
+		}
+		if ch == ')' || ch == ']' {
+			bracketDepth--
+		}
+
+		if ch == ' ' && bracketDepth == 0 {
+			if current.Len() > 0 {
+				fields = append(fields, current.String())
+				current.Reset()
+			}
+		} else {
+			current.WriteByte(ch)
+		}
+	}
+
+	if current.Len() > 0 {
+		fields = append(fields, current.String())
+	}
+
+	if bracketDepth != 0 {
+		return nil, fmt.Errorf("unterminated HEADER.FIELDS")
+	}
+
+	logger.Debugf("Parsed UID FETCH request: Range %d:%d, Fields: %v", start, end, fields)
 
 	return &UIDFetchRequest{
 		RangeStart: start,
 		RangeEnd:   end,
-		Fields:     fieldList,
+		Fields:     fields,
 	}, nil
 }
 
