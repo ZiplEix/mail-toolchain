@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"net"
 	"strings"
+
+	"github.com/ZiplEix/mail-toolchain/shared/logger"
 )
 
 type IMAPState int
@@ -37,7 +39,7 @@ func (s *Session) Send(msg string) {
 	s.Writer.WriteString(msg + "\r\n")
 	s.Writer.Flush()
 
-	// fmt.Println("Sent:", msg)
+	logger.Debugf("Sent to %s: %s", s.Conn.RemoteAddr().String(), msg)
 }
 
 func (s *Session) ReadLine() (string, error) {
