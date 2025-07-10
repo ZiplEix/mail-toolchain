@@ -46,7 +46,7 @@ func timestamp() string {
 }
 
 func Event(conn net.Conn, event string) {
-	if logLevelInt >= 2 {
+	if logLevelInt > 2 {
 		return
 	}
 	remote := conn.RemoteAddr().String()
@@ -54,7 +54,7 @@ func Event(conn net.Conn, event string) {
 }
 
 func Eventf(conn net.Conn, format string, args ...interface{}) {
-	if logLevelInt >= 2 {
+	if logLevelInt > 2 {
 		return
 	}
 	remote := conn.RemoteAddr().String()
@@ -62,56 +62,56 @@ func Eventf(conn net.Conn, format string, args ...interface{}) {
 }
 
 func Info(msg string) {
-	if logLevelInt >= 1 {
+	if logLevelInt > 1 {
 		return
 	}
 	fmt.Printf("%s[%s] [INFO] %s%s\n", colorBlue, timestamp(), msg, colorReset)
 }
 
 func Infof(format string, args ...interface{}) {
-	if logLevelInt >= 1 {
+	if logLevelInt > 1 {
 		return
 	}
 	fmt.Printf("%s[%s] [INFO] %s%s\n", colorBlue, timestamp(), fmt.Sprintf(format, args...), colorReset)
 }
 
 func Debug(msg string) {
-	if logLevelInt >= 0 {
+	if logLevelInt > 0 {
 		return
 	}
 	fmt.Printf("%s[%s] [DEBUG] %s%s\n", colorGreen, timestamp(), msg, colorReset)
 }
 
 func Debugf(format string, args ...interface{}) {
-	if logLevelInt >= 0 {
+	if logLevelInt > 0 {
 		return
 	}
 	fmt.Printf("%s[%s] [DEBUG] %s%s\n", colorGreen, timestamp(), fmt.Sprintf(format, args...), colorReset)
 }
 
 func Warn(msg string) {
-	if logLevelInt >= 3 {
+	if logLevelInt > 3 {
 		return
 	}
 	fmt.Printf("%s[%s] [WARN] %s%s\n", colorYellow, timestamp(), msg, colorReset)
 }
 
 func Warnf(format string, args ...interface{}) {
-	if logLevelInt >= 3 {
+	if logLevelInt > 3 {
 		return
 	}
 	fmt.Printf("%s[%s] [WARN] %s%s\n", colorYellow, timestamp(), fmt.Sprintf(format, args...), colorReset)
 }
 
 func Error(msg string) {
-	if logLevelInt >= 4 {
+	if logLevelInt > 4 {
 		return
 	}
 	fmt.Printf("%s[%s] [ERROR] %s%s\n", colorRed, timestamp(), msg, colorReset)
 }
 
 func Errorf(format string, args ...interface{}) {
-	if logLevelInt >= 4 {
+	if logLevelInt > 4 {
 		return
 	}
 	fmt.Printf("%s[%s] [ERROR] %s%s\n", colorRed, timestamp(), fmt.Sprintf(format, args...), colorReset)
