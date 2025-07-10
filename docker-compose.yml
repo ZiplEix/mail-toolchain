@@ -23,5 +23,21 @@ services:
       - ./key.pem:/key.pem
       - ./cert:/cert
 
+  imap-server:
+    build:
+      context: .
+      dockerfile: imap-server/Dockerfile
+    env_file:
+      - .env.docker
+    ports:
+      - "1143:1143"
+    depends_on:
+      - db
+      - smtp-server
+    volumes:
+      - ./cert.pem:/cert.pem
+      - ./key.pem:/key.pem
+      - ./cert:/cert
+
 volumes:
   postgres-db:
