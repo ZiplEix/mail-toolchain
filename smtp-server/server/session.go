@@ -16,16 +16,24 @@ type Session struct {
 	From   string
 	ToList []string
 	Mode   string // "command" or "data"
+
+	Username      string
+	Authenticated bool
+
+	TLS bool
 }
 
 func NewSession(conn net.Conn) *Session {
 	return &Session{
-		Conn:   conn,
-		Reader: bufio.NewReader(conn),
-		Writer: bufio.NewWriter(conn),
-		From:   "",
-		ToList: nil,
-		Mode:   "command",
+		Conn:          conn,
+		Reader:        bufio.NewReader(conn),
+		Writer:        bufio.NewWriter(conn),
+		From:          "",
+		ToList:        nil,
+		Mode:          "command",
+		Username:      "",
+		Authenticated: false,
+		TLS:           false,
 	}
 }
 
@@ -34,6 +42,7 @@ func (s *Session) SendLine(line string) error {
 	if err != nil {
 		return err
 	}
+	logger.Debug("S: " + line)
 	return s.Writer.Flush()
 }
 
@@ -42,7 +51,6 @@ func (s *Session) SendError(code int, msg string) error {
 	if err := s.SendLine(resp); err != nil {
 		return err
 	}
-	logger.Event(s.Conn, "S: "+resp)
 	return nil
 }
 
