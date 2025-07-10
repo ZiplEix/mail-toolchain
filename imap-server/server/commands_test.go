@@ -4,9 +4,13 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/ZiplEix/mail-toolchain/shared/logger"
 )
 
 func TestParseUIDFetch_ValidInputs(t *testing.T) {
+	logger.Init("info")
+
 	tests := []struct {
 		rangeStr  string
 		fieldsRaw string
@@ -50,6 +54,8 @@ func TestParseUIDFetch_ValidInputs(t *testing.T) {
 }
 
 func TestParseUIDFetch_InvalidInputs(t *testing.T) {
+	logger.Init("info")
+
 	tests := []struct {
 		rangeStr  string
 		fieldsRaw string
@@ -76,6 +82,8 @@ func TestParseUIDFetch_InvalidInputs(t *testing.T) {
 }
 
 func TestExtractHeaders(t *testing.T) {
+	logger.Init("info")
+
 	raw := "Subject: Hello\r\nFrom: test@example.com\r\nTo: you@example.com\r\n\r\nBody here"
 	wanted := []string{"From", "To"}
 	expected := "From: test@example.com\r\nTo: you@example.com\r\n\r\n"
@@ -86,6 +94,8 @@ func TestExtractHeaders(t *testing.T) {
 }
 
 func TestParseUIDFetch_ComplexHeaderFields(t *testing.T) {
+	logger.Init("info")
+
 	rangeStr := "1:3"
 	fieldsRaw := "(UID RFC822.SIZE FLAGS BODY.PEEK[HEADER.FIELDS (From To Cc Bcc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type Reply-To)])"
 
