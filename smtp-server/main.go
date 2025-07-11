@@ -32,6 +32,10 @@ func init() {
 	if err := server.LoadTLSConfig(certPath, keyPath); err != nil {
 		panic(fmt.Sprintf("Failed to load TLS configuration: %v", err))
 	}
+
+	if err := server.LoadPrivateKey(os.Getenv("DKIM_PRIVATE_PATH")); err != nil {
+		panic(fmt.Sprintf("Failed to load DKIM private key: %v", err))
+	}
 }
 
 func main() {

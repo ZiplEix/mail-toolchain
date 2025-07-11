@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ZiplEix/mail-toolchain/shared/database"
 	"github.com/ZiplEix/mail-toolchain/shared/logger"
 )
 
@@ -79,21 +78,9 @@ func HandleConnection(session *Session) {
 			}
 
 		case "data":
-			if line == "." {
-				err := database.SaveMail(session.From, session.ToList, dataLines)
-				if err != nil {
-					session.SendError(550, "Error saving message to database")
-					logger.Event(session.Conn, fmt.Sprintf("Error saving mail from %s to %v: %v", session.From, session.ToList, err))
-				} else {
-					session.SendLine("250 OK: message accepted")
-					logger.Event(session.Conn, fmt.Sprintf("Mail saved from %s to %v", session.From, session.ToList))
-				}
-				session.Mode = "command"
-				session.From = ""
-				session.ToList = nil
-				dataLines = nil
-			} else {
-				dataLines = append(dataLines, line)
+			dataLines, err = dataMode(session, line, dataLines)
+			if err != nil {
+				continue
 			}
 		}
 	}
